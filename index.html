@@ -287,18 +287,15 @@
              
              document.querySelectorAll(`.score-cell[data-person-index="${selectedIndex}"]`).forEach(cell => {
                cell.classList.remove('locked');
-               cell.classList.add('active-col'); // Darkens the background slightly
+               cell.classList.add('active-col');
              });
              
-             // Scroll exactly to this column next to the flavor name
-             const flavorColWidth = document.querySelector('.flavor-name').offsetWidth || 150;
-             wrapper.scrollTo({
-               left: target.offsetLeft - flavorColWidth,
-               behavior: 'smooth'
-             });
-             
-             // Lock horizontal scroll so vertical swiping doesn't drift
+             // Lock horizontal scroll BEFORE setting the position to prevent iOS snap-back
              wrapper.style.overflowX = 'hidden';
+             
+             // Calculate position and apply instantly
+             const flavorColWidth = document.querySelector('.flavor-name').offsetWidth || 150;
+             wrapper.scrollLeft = target.offsetLeft - flavorColWidth;
           }
         }
         
@@ -322,7 +319,6 @@
         }
       });
     }
-
     function autoSave() {
       localStorage.setItem('cakeRatingsData', JSON.stringify(appData));
       renderChart(); // keep chart in sync silently
