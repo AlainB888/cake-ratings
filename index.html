@@ -50,12 +50,6 @@
       flex: 1; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; 
       background: var(--surface); 
     }
-    
-    /* iOS Safari fix to lock horizontal swipe natively */
-    .table-wrapper.lock-x { 
-      touch-action: pan-y !important; 
-    }
-    
     table { width: 100%; border-collapse: separate; border-spacing: 0; }
     th, td { 
       padding: 14px 12px; text-align: center; white-space: nowrap; 
@@ -74,7 +68,7 @@
     th.person-header { color: var(--text-muted); transition: color 0.2s; cursor: pointer; }
     th.person-header.selected { color: var(--tint); background: #E5F1FF; }
 
-    /* Score Cells - Only background color, no text */
+    /* Score Cells */
     .score-cell { font-weight: 600; user-select: none; transition: filter 0.2s; color: transparent !important; }
     .score-cell[data-score="0"] { background: var(--surface); }
     .score-cell[data-score="1"] { background: #194c7b; }
@@ -83,7 +77,6 @@
     .score-cell[data-score="4"] { background: #33a331; }
     .score-cell[data-score="-1"] { background: #212529; }
     
-    /* Logic: Lock interactions, darken selected column */
     .score-cell.locked { pointer-events: none; }
     .score-cell.active-col { filter: brightness(0.85); }
 
@@ -106,6 +99,7 @@
     .ios-list button:last-child, .ios-list label:last-child { border-bottom: none; }
     .ios-list button:active { background: #E5E5EA; }
     .list-title { font-size: 13px; text-transform: uppercase; color: var(--text-muted); margin: 0 0 8px 16px; }
+    .text-danger { color: #FF3B30 !important; }
 
     /* --- Tab Bar --- */
     .tab-bar { 
@@ -147,6 +141,8 @@
         <div class="list-title">Manage Data</div>
         <div class="ios-list">
           <button onclick="addUser()">Add User</button>
+          <button onclick="editUser()">Edit User</button>
+          <button onclick="removeUser()" class="text-danger">Remove User</button>
           <button onclick="addFlavor()">Add Flavor</button>
         </div>
 
@@ -169,63 +165,14 @@
   </div>
 
   <script>
-    const defaultData = {
-      "flavors": [
-        "Chocolat noir 🍫", "Chocolat au lait 🍫", "Chocolat blanc ◽️", "Gianduja", "Caramel🍮",
-        "Vanille", "Café☕️", "Spéculoos", "Praliné🌰", "Noisette🌰", "Pistache", "Amande",
-        "Marron", "Cacahuète🥜", "Noix", "Noix de pécan", "Noix de cajou", "Noix de macadamia",
-        "Pignon", "Fraise 🍓", "Framboise", "Cerise 🍒", "Griotte🍒", "Myrtille🫐", "Mûre",
-        "Cassis", "Groseille", "Canneberge", "Fruits rouges 🔴", "Banane 🍌", "Ananas🍍",
-        "Mangue 🥭", "Passion", "Kiwi🥝", "Grenade", "Noix de coco🥥", "Goyave", "Datte",
-        "Avocat🥑", "Litchi", "Gingembre🫚", "Figue", "Figue de Barbarie", "Abricot", "Pêche🍑",
-        "Poire🍐", "Pomme🍎", "Prune", "Quetsche", "Mirabelle", "Reine-Claude", "Coing",
-        "Raisin🍇", "Citron🍋", "Citron Vert🍋‍🟩", "Orange🍊", "Mandarine🍊", "Kumquat", "Yuzu",
-        "Kalamansi🍊", "Pamplemousse", "Bergamote", "Orange sanguine🍊", "Kaki", "Basilic🌱",
-        "Menthe🌱", "Romarin🌿", "Coriandre🌿", "Verveine", "Thym", "Hibiscus🌺", "Rose 🌹",
-        "Fleur d’oranger", "Miel 🍯", "Matcha", "Sésame doré", "Sésame Noir", "Cannelle",
-        "Anis", "Tonka", "Popcorn🍿", "Amaretto", "Limoncello🍋", "Whiskey🥃", "Rhum", "Gin🍸",
-        "Piña Colada🍹", "Rhubarbe", "Betterave", "Poivron🫑", "Carotte🥕"
-      ],
-      "scores": [
-        [3, 4, 4, 0, 0, 0, 0, 0], [4, 4, 4, 0, 0, 0, 0, 0], [4, 3, 4, 0, 0, 0, 0, 0],
-        [-1, 4, 4, 0, 0, 0, 0, 0], [1, 4, 3, 0, -1, 0, 0, 0], [4, 4, 4, 0, 0, 0, 0, 0],
-        [2, 4, -1, 0, 0, 0, 0, 0], [-1, 4, 3, 0, 0, 0, 0, 0], [3, 3, 3, 0, 0, 0, 0, 0],
-        [3, 3, 3, 0, 0, 0, 0, 0], [4, 4, 4, 0, 0, 0, 0, 0], [2, 4, 4, 0, 0, 0, 0, 0],
-        [3, 4, 3, 0, 0, 0, 0, 0], [4, 3, 4, 0, 0, 0, 0, 0], [3, 2, 3, 0, 0, 0, 0, 0],
-        [3, 3, 3, 0, 0, 0, 0, 0], [1, 1, 1, 0, 0, 0, 0, 0], [1, 1, 1, 0, 0, 0, 0, 0],
-        [1, 1, 1, 0, 0, 0, 0, 0], [4, 4, 4, 0, 0, 0, 0, 0], [2, 2, 3, 0, 0, 0, 0, 0],
-        [2, 3, 4, 0, 0, 0, 0, 0], [2, 2, 4, 0, 0, 0, 0, 0], [2, 2, 2, 0, 0, 0, 0, 0],
-        [2, 2, 4, 0, 0, 0, 0, 0], [1, 2, 3, 0, 0, 0, 0, 0], [1, 1, 1, 0, 0, 0, 0, 0],
-        [1, 1, 1, 0, 0, 0, 0, 0], [2, 3, 4, 0, 0, 0, 0, 0], [2, 4, 4, 0, 0, 0, 0, 0],
-        [1, 4, 4, 0, 0, 0, 0, 0], [4, 4, 4, 0, 0, 0, 0, 0], [1, 3, 4, 0, 0, 0, 0, 0],
-        [1, 3, 4, 0, 0, 0, 0, 0], [1, 1, 1, 0, 0, 0, 0, 0], [1, 3, 3, 0, 0, 0, 0, 0],
-        [1, 1, 1, 0, 0, 0, 0, 0], [2, 2, 3, 0, 0, 0, 0, 0], [1, 4, 3, 0, 0, 0, 0, 0],
-        [1, 2, 3, 0, 0, 0, 0, 0], [1, 3, 3, 0, 0, 0, 0, 0], [1, 4, 1, 0, 0, 0, 0, 0],
-        [1, 1, 1, 0, 0, 0, 0, 0], [1, 0, 3, 0, 0, 0, 0, 0], [4, 0, 4, 0, 0, 0, 0, 0],
-        [2, 0, 3, 0, 0, 0, 0, 0], [2, 0, 2, 0, 0, 0, 0, 0], [2, 0, 1, 0, 0, 0, 0, 0],
-        [2, 0, 1, 0, 0, 0, 0, 0], [2, 0, 1, 0, 0, 0, 0, 0], [2, 0, 1, 0, 0, 0, 0, 0],
-        [2, 0, 1, 0, 0, 0, 0, 0], [1, 0, 1, 0, 0, 0, 0, 0], [4, 0, 4, 0, 0, 0, 0, 0],
-        [4, 0, 4, 0, 0, 0, 0, 0], [4, 0, 4, 0, 0, 0, 0, 0], [4, 0, 4, 0, 0, 0, 0, 0],
-        [3, 0, 1, 0, 0, 0, 0, 0], [3, 0, 4, 0, 0, 0, 0, 0], [1, 0, 3, 0, 0, 0, 0, 0],
-        [2, 0, 1, 0, 0, 0, 0, 0], [4, 0, 4, 0, 0, 0, 0, 0], [1, 0, 1, 0, 0, 0, 0, 0],
-        [1, 0, 1, 0, 0, 0, 0, 0], [3, 0, 3, 0, 0, 0, 0, 0], [2, 0, 3, 0, 0, 0, 0, 0],
-        [3, 0, 3, 0, 0, 0, 0, 0], [1, 0, 4, 0, 0, 0, 0, 0], [1, 0, 4, 0, 0, 0, 0, 0],
-        [1, 0, 1, 0, 0, 0, 0, 0], [1, 0, 1, 0, 0, 0, 0, 0], [3, 0, 2, 0, 0, 0, 0, 0],
-        [4, 0, 4, 0, 0, 0, 0, 0], [4, 0, 3, 0, 0, 0, 0, 0], [2, 0, 2, 0, 0, 0, 0, 0],
-        [3, 0, 3, 0, 0, 0, 0, 0], [3, 0, 3, 0, 0, 0, 0, 0], [1, 0, 3, 0, 0, 0, 0, 0],
-        [2, 0, 1, 0, 0, 0, 0, 0], [1, 0, 4, 0, 0, 0, 0, 0], [1, 0, 1, 0, 0, 0, 0, 0],
-        [1, 0, 4, 0, 0, 0, 0, 0], [1, 0, 4, 0, 0, 0, 0, 0], [1, 0, 3, 0, 0, 0, 0, 0],
-        [1, 0, 3, 0, 0, 0, 0, 0], [1, 0, 3, 0, 0, 0, 0, 0], [1, 0, 3, 0, 0, 0, 0, 0],
-        [1, 0, 3, 0, 0, 0, 0, 0], [1, 0, 1, 0, 0, 0, 0, 0], [1, 0, 1, 0, 0, 0, 0, 0],
-        [3, 0, 4, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0]
-      ],
-      "title": "Cake Ratings",
-      "people": ["Alain", "Fadi", "Anthony", "Manée", "Elise", "Joy", "Yara", "Nour"]
-    };
-
     let appData = JSON.parse(localStorage.getItem('cakeRatingsData'));
-    if (!appData) {
-      appData = defaultData;
+    if (!appData || !appData.flavors) {
+      appData = {
+        "flavors": ["Chocolat noir 🍫", "Chocolat au lait 🍫", "Vanille", "Fraise 🍓"],
+        "scores": [[0,0], [0,0], [0,0], [0,0]],
+        "title": "Cake Ratings",
+        "people": ["User 1", "User 2"]
+      };
       localStorage.setItem('cakeRatingsData', JSON.stringify(appData));
     }
 
@@ -268,21 +215,17 @@
         const target = event.target;
         const wrapper = document.getElementById('table-wrapper');
         
-        // Handle column selection
+        // Column selection and snapping
         if (target.classList.contains('person-header')) {
           const selectedIndex = target.dataset.personIndex;
           
           if (target.classList.contains('selected')) {
-             // Deselect
              target.classList.remove('selected');
-             wrapper.classList.remove('lock-x'); // Unlock horizontal swipe
-             
              document.querySelectorAll('.score-cell').forEach(cell => {
                cell.classList.add('locked');
                cell.classList.remove('active-col');
              });
           } else {
-             // Select
              document.querySelectorAll('.person-header').forEach(h => h.classList.remove('selected'));
              target.classList.add('selected');
              
@@ -296,18 +239,15 @@
                cell.classList.add('active-col');
              });
              
-             // Lock horizontal swipe using CSS instead of overflow bounds
-             wrapper.classList.add('lock-x');
-             
-             // Wait 50ms for iOS to clear the tap gesture, then snap to position
-             setTimeout(() => {
-               const flavorColWidth = document.querySelector('.flavor-name').offsetWidth || 150;
-               wrapper.scrollLeft = target.offsetLeft - flavorColWidth;
-             }, 50);
+             const flavorColWidth = document.querySelector('.flavor-name').offsetWidth || 150;
+             wrapper.scrollTo({
+               left: target.offsetLeft - flavorColWidth,
+               behavior: 'smooth'
+             });
           }
         }
         
-        // Handle score iteration (auto-saves immediately)
+        // Score iteration
         if (target.classList.contains('score-cell') && !target.classList.contains('locked')) {
           const MAX_SCORE = 4;
           const ALLERGIC_SCORE = -1;
@@ -327,12 +267,13 @@
         }
       });
     }
-   
+
     function autoSave() {
       localStorage.setItem('cakeRatingsData', JSON.stringify(appData));
-      renderChart(); // keep chart in sync silently
+      renderChart(); 
     }
 
+    // --- User Management Methods ---
     function addUser() {
       const name = prompt("Enter new user's name:");
       if (!name || name.trim() === "") return;
@@ -340,6 +281,44 @@
       appData.scores.forEach(flavorRow => flavorRow.push(0));
       autoSave();
       renderTable();
+    }
+
+    function editUser() {
+      const namesList = appData.people.map((p, i) => `${i + 1}: ${p}`).join("\n");
+      const indexStr = prompt(`Enter the NUMBER of the user to edit:\n\n${namesList}`);
+      if (!indexStr) return;
+      const index = parseInt(indexStr, 10) - 1;
+      
+      if (isNaN(index) || index < 0 || index >= appData.people.length) {
+        alert("Invalid selection.");
+        return;
+      }
+      
+      const newName = prompt("Enter new name for " + appData.people[index] + ":", appData.people[index]);
+      if (newName && newName.trim() !== "") {
+        appData.people[index] = newName.trim();
+        autoSave();
+        renderTable();
+      }
+    }
+
+    function removeUser() {
+      const namesList = appData.people.map((p, i) => `${i + 1}: ${p}`).join("\n");
+      const indexStr = prompt(`Enter the NUMBER of the user to remove:\n\n${namesList}`);
+      if (!indexStr) return;
+      const index = parseInt(indexStr, 10) - 1;
+      
+      if (isNaN(index) || index < 0 || index >= appData.people.length) {
+        alert("Invalid selection.");
+        return;
+      }
+
+      if (confirm(`Are you sure you want to completely remove ${appData.people[index]} and all their scores?`)) {
+        appData.people.splice(index, 1);
+        appData.scores.forEach(row => row.splice(index, 1));
+        autoSave();
+        renderTable();
+      }
     }
 
     function addFlavor() {
@@ -355,14 +334,29 @@
       renderTable();
     }
 
+    // --- Export / Import ---
     function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", "cake-ratings.json");
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
+      const dataStr = JSON.stringify(appData, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const file = new File([blob], "cake-ratings.json", { type: "application/json" });
+
+      // iOS Safari native share sheet bypasses download restrictions
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({
+          files: [file],
+          title: 'Cake Ratings Backup',
+        }).catch(err => console.error("Export canceled or failed", err));
+      } else {
+        // Fallback
+        const url = URL.createObjectURL(blob);
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", url);
+        downloadAnchor.setAttribute("download", "cake-ratings.json");
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        document.body.removeChild(downloadAnchor);
+        URL.revokeObjectURL(url);
+      }
     }
 
     function importData(fileInput) {
@@ -386,6 +380,7 @@
       reader.readAsText(fileInput.files[0]);
     }
 
+    // --- Charting ---
     function renderChart() {
       const avgScores = appData.scores.map(row => {
         const valid = row.filter(s => s > 0);
