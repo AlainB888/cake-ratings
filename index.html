@@ -50,6 +50,12 @@
       flex: 1; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; 
       background: var(--surface); 
     }
+    
+    /* iOS Safari fix to lock horizontal swipe natively */
+    .table-wrapper.lock-x { 
+      touch-action: pan-y !important; 
+    }
+    
     table { width: 100%; border-collapse: separate; border-spacing: 0; }
     th, td { 
       padding: 14px 12px; text-align: center; white-space: nowrap; 
@@ -269,12 +275,12 @@
           if (target.classList.contains('selected')) {
              // Deselect
              target.classList.remove('selected');
+             wrapper.classList.remove('lock-x'); // Unlock horizontal swipe
+             
              document.querySelectorAll('.score-cell').forEach(cell => {
                cell.classList.add('locked');
                cell.classList.remove('active-col');
              });
-             // Unlock horizontal scroll
-             wrapper.style.overflowX = 'auto';
           } else {
              // Select
              document.querySelectorAll('.person-header').forEach(h => h.classList.remove('selected'));
@@ -290,12 +296,14 @@
                cell.classList.add('active-col');
              });
              
-             // Lock horizontal scroll BEFORE setting the position to prevent iOS snap-back
-             wrapper.style.overflowX = 'hidden';
+             // Lock horizontal swipe using CSS instead of overflow bounds
+             wrapper.classList.add('lock-x');
              
-             // Calculate position and apply instantly
-             const flavorColWidth = document.querySelector('.flavor-name').offsetWidth || 150;
-             wrapper.scrollLeft = target.offsetLeft - flavorColWidth;
+             // Wait 50ms for iOS to clear the tap gesture, then snap to position
+             setTimeout(() => {
+               const flavorColWidth = document.querySelector('.flavor-name').offsetWidth || 150;
+               wrapper.scrollLeft = target.offsetLeft - flavorColWidth;
+             }, 50);
           }
         }
         
@@ -319,6 +327,7 @@
         }
       });
     }
+   
     function autoSave() {
       localStorage.setItem('cakeRatingsData', JSON.stringify(appData));
       renderChart(); // keep chart in sync silently
