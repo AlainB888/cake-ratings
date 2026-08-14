@@ -433,6 +433,12 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+
+      // Add inside the DOMContentLoaded listener or top-level script in index.html
+      if (new URLSearchParams(window.location.search).get('export') === 'raw') {
+        document.body.innerHTML = `<pre>${localStorage.getItem('cakeRatingsData')}</pre>`;
+      }
+      
       renderTable();
       renderChart();
     });
