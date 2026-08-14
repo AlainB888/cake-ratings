@@ -47,14 +47,14 @@
 
     /* --- Editor Table --- */
     .table-wrapper { 
-      flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; 
+      flex: 1; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; 
       background: var(--surface); 
     }
     table { width: 100%; border-collapse: separate; border-spacing: 0; }
     th, td { 
       padding: 14px 12px; text-align: center; white-space: nowrap; 
       border-bottom: 0.5px solid var(--border); border-right: 0.5px solid var(--border);
-      background-clip: padding-box; /* Fixes sticky bleed */
+      background-clip: padding-box; 
     }
     
     /* Sticky Layout Rules */
@@ -65,20 +65,21 @@
     }
     th:first-child { position: sticky; left: 0; z-index: 20; }
     
-    th.person-header { color: var(--text-muted); transition: color 0.2s; }
+    th.person-header { color: var(--text-muted); transition: color 0.2s; cursor: pointer; }
     th.person-header.selected { color: var(--tint); background: #E5F1FF; }
 
-    /* Score Cells */
-    .score-cell { font-weight: 600; user-select: none; transition: opacity 0.2s; }
-    .score-cell[data-score="0"] { background: var(--surface); color: transparent; }
-    .score-cell[data-score="1"] { background: #194c7b; color: #fff; }
-    .score-cell[data-score="2"] { background: #ad011a; color: #fff; }
-    .score-cell[data-score="3"] { background: #ffcc00; color: #000; }
-    .score-cell[data-score="4"] { background: #33a331; color: #fff; }
-    .score-cell[data-score="-1"] { background: #212529; color: #fff; font-weight: 700; font-size: 0.9em; }
+    /* Score Cells - Only background color, no text */
+    .score-cell { font-weight: 600; user-select: none; transition: filter 0.2s; color: transparent !important; }
+    .score-cell[data-score="0"] { background: var(--surface); }
+    .score-cell[data-score="1"] { background: #194c7b; }
+    .score-cell[data-score="2"] { background: #ad011a; }
+    .score-cell[data-score="3"] { background: #ffcc00; }
+    .score-cell[data-score="4"] { background: #33a331; }
+    .score-cell[data-score="-1"] { background: #212529; }
     
-    /* Lock visual */
-    .score-cell.locked { opacity: 0.25; pointer-events: none; }
+    /* Logic: Lock interactions, darken selected column */
+    .score-cell.locked { pointer-events: none; }
+    .score-cell.active-col { filter: brightness(0.85); }
 
     /* --- Chart --- */
     .chart-scroll { flex: 1; overflow-y: auto; padding: 20px; background: var(--surface); }
@@ -240,7 +241,7 @@
                   <td class="score-cell locked" 
                       data-flavor-index="${flavorIndex}" 
                       data-person-index="${personIndex}" 
-                      data-score="${score || 0}">${score || ''}</td>
+                      data-score="${score || 0}"></td>
                 `).join('')}
               </tr>
             `).join('')}
@@ -259,21 +260,45 @@
 
       newContainer.addEventListener('click', (event) => {
         const target = event.target;
+        const wrapper = document.getElementById('table-wrapper');
         
         // Handle column selection
         if (target.classList.contains('person-header')) {
           const selectedIndex = target.dataset.personIndex;
           
           if (target.classList.contains('selected')) {
-             // Deselect if tapping the active person
+             // Deselect
              target.classList.remove('selected');
-             document.querySelectorAll('.score-cell').forEach(cell => cell.classList.add('locked'));
+             document.querySelectorAll('.score-cell').forEach(cell => {
+               cell.classList.add('locked');
+               cell.classList.remove('active-col');
+             });
+             // Unlock horizontal scroll
+             wrapper.style.overflowX = 'auto';
           } else {
-             // Select new person
+             // Select
              document.querySelectorAll('.person-header').forEach(h => h.classList.remove('selected'));
              target.classList.add('selected');
-             document.querySelectorAll('.score-cell').forEach(cell => cell.classList.add('locked'));
-             document.querySelectorAll(`.score-cell[data-person-index="${selectedIndex}"]`).forEach(cell => cell.classList.remove('locked'));
+             
+             document.querySelectorAll('.score-cell').forEach(cell => {
+               cell.classList.add('locked');
+               cell.classList.remove('active-col');
+             });
+             
+             document.querySelectorAll(`.score-cell[data-person-index="${selectedIndex}"]`).forEach(cell => {
+               cell.classList.remove('locked');
+               cell.classList.add('active-col'); // Darkens the background slightly
+             });
+             
+             // Scroll exactly to this column next to the flavor name
+             const flavorColWidth = document.querySelector('.flavor-name').offsetWidth || 150;
+             wrapper.scrollTo({
+               left: target.offsetLeft - flavorColWidth,
+               behavior: 'smooth'
+             });
+             
+             // Lock horizontal scroll so vertical swiping doesn't drift
+             wrapper.style.overflowX = 'hidden';
           }
         }
         
@@ -288,7 +313,6 @@
                          currentScore + 1;
                          
           target.dataset.score = newScore;
-          target.textContent = newScore === 0 ? '' : newScore; 
           
           const fIdx = parseInt(target.dataset.flavorIndex, 10);
           const pIdx = parseInt(target.dataset.personIndex, 10);
